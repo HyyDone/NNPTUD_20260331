@@ -1,30 +1,35 @@
-const nodemailer = require("nodemailer");
+const { MailtrapClient } = require("mailtrap");
 
-const transporter = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
-    secure: false,
-    auth: {
-        user: "",
-        pass: "",
-    },
+// ✅ Điền API Token từ Mailtrap vào đây (Settings → API Tokens)
+const MAILTRAP_TOKEN = "";
+
+// ✅ Điền Inbox ID nếu dùng Sandbox (Email Testing → Inboxes → chọn inbox → lấy ID trên URL)
+const MAILTRAP_INBOX_ID = 0;
+
+// Đặt true để test qua Sandbox, false để gửi email thật (Production)
+const USE_SANDBOX = true;
+
+const client = new MailtrapClient({
+    token: MAILTRAP_TOKEN,
+    sandbox: USE_SANDBOX,
+    testInboxId: USE_SANDBOX ? MAILTRAP_INBOX_ID : undefined,
 });
 
 module.exports = {
     sendMail: async function (to, url) {
-        await transporter.sendMail({
-            from: 'admin@haha.com',
-            to: to,
-            subject: "reset password email",
-            text: "click vao day de doi pass",
-            html: "click vao <a href=" + url + ">day</a> de doi pass",
-        })
+        await client.send({
+            from: { name: "Coffee Shop Admin", email: "admin@coffeeshop.com" },
+            to: [{ email: to }],
+            subject: "Reset password email",
+            text: "Click vao day de doi pass: " + url,
+            html: "Click vao <a href=" + url + ">day</a> de doi pass",
+        });
     },
 
     sendPasswordEmail: async function (to, username, password) {
-        await transporter.sendMail({
-            from: '"Coffee Shop Admin" <admin@coffeeshop.com>',
-            to: to,
+        await client.send({
+            from: { name: "Coffee Shop Admin", email: "admin@coffeeshop.com" },
+            to: [{ email: to }],
             subject: "Tài khoản của bạn đã được tạo",
             text: `Xin chào ${username},\n\nTài khoản của bạn đã được tạo thành công.\nUsername: ${username}\nPassword: ${password}\n\nVui lòng đổi mật khẩu sau khi đăng nhập lần đầu.\n\nTrân trọng,\nCoffee Shop Admin`,
             html: `
