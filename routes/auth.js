@@ -7,7 +7,7 @@ let crypto = require('crypto')
 let { sendMail } = require('../utils/sendMail')
 let cartModel = require('../schemas/carts')
 let mongoose = require('mongoose')
-//login
+
 router.post('/login', async function (req, res, next) {
     let { username, password } = req.body;
     let result = await userController.QueryLogin(username, password);
@@ -23,24 +23,24 @@ router.post('/login', async function (req, res, next) {
     }
 })
 router.post('/register', RegisterValidator, validatedResult, async function (req, res, next) {
-    let session = await mongoose.startSession();
-    let transaction = session.startTransaction()
+    let newUser = null;
     try {
         let { username, password, email } = req.body;
-        let newUser = await userController.CreateAnUser(
-            username, password, email, '69b6231b3de61addb401ea26', session
+
+        let roleModel = require('../schemas/roles');
+        let defaultRole = await roleModel.findOne({ name: /^user$/i, isDeleted: false });
+        if (!defaultRole) defaultRole = await roleModel.findOne({ isDeleted: false });
+        if (!defaultRole) return res.status(400).send("Không tìm thấy role trong DB. Hãy tạo role trước.");
+
+        newUser = await userController.CreateAnUser(
+            username, password, email, defaultRole._id
         )
-        let newCart = new cartModel({
-            user: newUser._id
-        })
-        newCart = await newCart.save({ session })
+        let newCart = new cartModel({ user: newUser._id })
+        newCart = await newCart.save()
         newCart = await newCart.populate('user')
-        session.commitTransaction()
-        session.endSession()
         res.send(newCart)
     } catch (error) {
-        session.abortTransaction()
-        session.endSession()
+        if (newUser) await newUser.deleteOne().catch(() => { });
         res.status(404).send(error.message)
     }
 })
@@ -88,6 +88,4 @@ router.post('/resetpassword/:token', async function (req, res, next) {
     res.send("thanh cong")
 })
 
-//forgotpassword
-//permission
 module.exports = router;
